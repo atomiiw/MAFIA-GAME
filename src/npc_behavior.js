@@ -147,17 +147,30 @@ function npcMoves(npc, speed = 100) {
  * Returns a new direction that isn't colliding or random if all collide
  */
 function getNewDirection(npc) {
+    // Cache arrays once
+    const walls = get("wall");
+    const npcs = get("npc");
+    const players = get("player");
 
     let safeDirs = [];
 
     directions.forEach((dir) => {
-        if (
-            !npc.forecasthitbox[dir].isColliding("wall") &&
-            !npc.forecasthitbox[dir].isColliding("npc") &&
-            !npc.forecasthitbox[dir].isColliding("player")
-        ) {
+        const fbox = npc.forecasthitbox[dir];
+
+        // Optional: Quick proximity check for walls (e.g. skip if far away)
+        // Adjust "maxCheckDist" to your liking
+        const maxCheckDist = 300;
+
+        // Filter walls to those near the forecast box (distance < maxCheckDist)
+        const closeWalls = walls.filter((w) => w.pos.dist(fbox.pos) < maxCheckDist);
+
+        const isBlockedByWall = closeWalls.some((w) => fbox.isOverlapping(w));
+        const isBlockedByNPC  = npcs.some((other) => other !== npc && fbox.isOverlapping(other));
+        const isBlockedByPlayer = players.some((p) => fbox.isOverlapping(p));
+
+        if (!isBlockedByWall && !isBlockedByNPC && !isBlockedByPlayer) {
             safeDirs.push(dir);
-        }                                  
+        }
     });
 
     if (safeDirs.length > 0) {
@@ -166,6 +179,7 @@ function getNewDirection(npc) {
     // If all colliding, pick any random direction
     return choose(directions);
 }
+
 
 // function scheduleNextAction(npc) {
 
