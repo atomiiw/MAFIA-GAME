@@ -3,9 +3,9 @@ export const player = add([
     sprite("player_char"),
     pos(1000, 900),
     scale(1.5),
-    area(),
-    body(),
-    "player",
+    area(), 
+    body({ isStatic: false }), // Ensures player can move
+    "player"
 ]);
 
 player.neighbors = []; // Array to track detected neighbors

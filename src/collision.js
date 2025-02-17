@@ -166,15 +166,19 @@ function processCollisionTile(spriteName, offsetX, offsetY, scaleFactor = 1) {
 
         // 4) Add each merged rectangle as a `wall`
         let totalWalls = 0;
+        const wallObjects = []; // Store references to walls if needed
+
         mergedRects.forEach((rectInfo) => {
-            add([
+            const wall = add([
                 rect(rectInfo.w, rectInfo.h),
                 pos(rectInfo.x, rectInfo.y),
-                area(),
-                body({ isStatic: true }),
-                opacity(0), // set to 1 (or remove) if you want to see them
-                "wall",
+                area(),  // Ensures collision detection works
+                body({ isStatic: true }), // Walls don't move
+                opacity(0), // Set to 1 (or remove) if you want to see them
+                "wall"
             ]);
+
+            wallObjects.push(wall);
             totalWalls++;
         });
 

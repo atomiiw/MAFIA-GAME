@@ -3,31 +3,6 @@ import { player } from "./player.js";
 import { updateNPCDirection } from "./npc_utils.js";
 import { directions } from "./npc_data.js";
 
-function stuck_detection(obj) {
-
-    if (!obj.isPaused) {
-        const currentPos = obj.pos.clone();
-
-        // Check if position hasn't changed significantly AND direction hasn't changed
-        if (obj.lastPos.dist(currentPos) <= 0.5 && obj.currentDir === obj.prevDir) {
-            obj.stuckTime += 1; // Increment time if stuck
-        } else {
-            obj.stuckTime = 0; // Reset if position changed
-        }
-
-        // Update tracking variables
-        obj.lastPos = currentPos.clone();
-        obj.prevDir = obj.currentDir; // Store previous direction
-
-        if (obj.stuckTime >= 12) { // Stuck for more than 8 frames
-            console.log("Object is stuck!");
-            return true;
-        }
-    }
-
-    return false;
-}
-
 /**
  * Setup basic NPC behavior
  */
@@ -57,28 +32,21 @@ export function setupNPCBehavior(npc, speed) {
 
     });
 
-    npc.hitbox.onCollide("wall", () => 
-        {
-            if (!npc.isEscaping) {
-                moveUntilFree(npc)
-            }
-        });
-    npc.hitbox.onCollide("npc", () => 
-        {
-            if (!npc.isEscaping) {
-                moveUntilFree(npc)
-            }
-        });
-    npc.hitbox.onCollide("player", () => 
-        {
-            if (!npc.isEscaping) {
-                moveUntilFree(npc)
-            }
-        });
+    HandleCollision(npc);  
 
     // Schedule random movement changes
-    // scheduleNextAction(npc);
+    scheduleNextAction(npc);
 
+}
+
+function HandleCollision(npc){
+    ["wall", "npc", "player"].forEach(tag => {
+        npc.hitbox.onCollide(tag, () => {
+            if (!npc.isEscaping) {
+                moveUntilFree(npc);
+            }
+        });
+    }); 
 }
 
 /**
@@ -87,15 +55,13 @@ export function setupNPCBehavior(npc, speed) {
 function moveUntilFree(npc) {
     if (npc.isPaused || npc.isEscaping) return;
 
-    console.log("colliding");
     npc.isEscaping = true; // Prevent repeated triggers
 
     // Pick a new direction that's hopefully safer
-    let newDirection = directions.filter(dir => dir !== npc.currentDir)[Math.floor(Math.random() * 3)];
-    npc.currentDir = newDirection;
+    npc.currentDir = getNewDirection(npc);
 
-    // (Optional) nudge NPC out so it's not still "inside" the wall or collider
-    let nudge = 2;
+    // nudge NPC out so it's not still "inside" the wall or collider
+    const nudge = 2;
     switch (npc.currentDir) {
         case "left":  npc.pos.x -= nudge; npc.play("walk-left");  break;
         case "right": npc.pos.x += nudge; npc.play("walk-right"); break;
@@ -111,10 +77,32 @@ function moveUntilFree(npc) {
     }, 100);
 }
 
+function stuck_detection(obj) {
+
+    if (!obj.isPaused) {
+        const currentPos = obj.pos.clone();
+
+        // Check if position hasn't changed significantly AND direction hasn't changed
+        if (obj.lastPos.dist(currentPos) <= 0.5 && obj.currentDir === obj.prevDir) {
+            obj.stuckTime += 1; // Increment time if stuck
+        } else {
+            obj.stuckTime = 0; // Reset if position changed
+        }
+
+        // Update tracking variables
+        obj.lastPos = currentPos.clone();
+        obj.prevDir = obj.currentDir; // Store previous direction
+
+        if (obj.stuckTime >= 12) { // Stuck for more than 8 frames
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 function npcMoves(npc, speed = 100) {
-
-    console.log("moving");
     
     if (npc.isPaused) {
         npc.stop()
@@ -156,51 +144,47 @@ function npcMoves(npc, speed = 100) {
 
 
 /**
- * Randomly pause or pick a new direction every 1-3 seconds
- */
-function scheduleNextAction(npc) {
-    if (isTalking && currentNPC === npc) return;
-
-    // Only proceed if the current direction is colliding
-    if (!isCollidingForecast(npc, npc.currentDir)) {
-        // If no collision, do nothing (stop scheduling)
-        return;
-    }
-
-    // If there is a collision on the current direction, pick a new action
-    npc.isPaused = Math.random() < 0.2; // 20% chance to pause
-    if (!npc.isPaused) {
-        npc.currentDir = getNewDirection(npc);
-    }
-
-    // Schedule the next action only if we collided
-    scheduleNextAction(npc);
-}
-
-
-/**
  * Returns a new direction that isn't colliding or random if all collide
  */
 function getNewDirection(npc) {
-    const directions = ["left", "right", "up", "down"];
-    let safeDirs = [];
 
-    directions.forEach((dir) => {
-        if (!isCollidingForecast(npc, dir)) {
-            safeDirs.push(dir);
-        }
-    });
+    // let safeDirs = [];
 
-    if (safeDirs.length > 0) {
-        return choose(safeDirs);
-    }
-    // If all colliding, pick any random direction
+    // directions.forEach((dir) => {
+    //     if (
+    //         !npc.forecasthitbox[dir].isColliding("wall") &&
+    //         !npc.forecasthitbox[dir].isColliding("npc") &&
+    //         !npc.forecasthitbox[dir].isColliding("player")
+    //     ) {
+    //         safeDirs.push(dir);
+    //     }                                  
+    // });
+
+    // if (safeDirs.length > 0) {
+    //     return choose(safeDirs);
+    // }
+    // // If all colliding, pick any random direction
     return choose(directions);
 }
 
-/**
- * Simply checks if the forecast box has been flagged as collided
- */
-function isCollidingForecast(npc, dir) {
-    return npc.forecasthitbox[dir].collided; 
+function scheduleNextAction(npc) {
+    wait(rand(3, 5), () => {  // Wait a random time between 1 and 10 seconds
+
+        if (npc.isEscaping) {
+            scheduleNextAction(npc); // Reschedule if escaping
+            return;
+        }
+
+        if (rand() < 0.2) {  
+            // 20% chance to pause
+            npc.isPaused = true;
+        } else {  
+            // 80% chance to choose a new direction
+            npc.isPaused = false;
+            npc.currentDir = getNewDirection(npc);
+        }
+
+        // Schedule the next action again
+        scheduleNextAction(npc);
+    });
 }
