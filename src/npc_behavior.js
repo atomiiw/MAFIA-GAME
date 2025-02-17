@@ -35,7 +35,7 @@ export function setupNPCBehavior(npc, speed) {
     HandleCollision(npc);  
 
     // Schedule random movement changes
-    scheduleNextAction(npc);
+    // scheduleNextAction(npc);
 
 }
 
@@ -148,43 +148,38 @@ function npcMoves(npc, speed = 100) {
  */
 function getNewDirection(npc) {
 
-    // let safeDirs = [];
+    let safeDirs = [];
 
-    // directions.forEach((dir) => {
-    //     if (
-    //         !npc.forecasthitbox[dir].isColliding("wall") &&
-    //         !npc.forecasthitbox[dir].isColliding("npc") &&
-    //         !npc.forecasthitbox[dir].isColliding("player")
-    //     ) {
-    //         safeDirs.push(dir);
-    //     }                                  
-    // });
+    directions.forEach((dir) => {
+        if (
+            !npc.forecasthitbox[dir].isColliding("wall") &&
+            !npc.forecasthitbox[dir].isColliding("npc") &&
+            !npc.forecasthitbox[dir].isColliding("player")
+        ) {
+            safeDirs.push(dir);
+        }                                  
+    });
 
-    // if (safeDirs.length > 0) {
-    //     return choose(safeDirs);
-    // }
-    // // If all colliding, pick any random direction
+    if (safeDirs.length > 0) {
+        return choose(safeDirs);
+    }
+    // If all colliding, pick any random direction
     return choose(directions);
 }
 
-function scheduleNextAction(npc) {
-    wait(rand(3, 5), () => {  // Wait a random time between 1 and 10 seconds
+// function scheduleNextAction(npc) {
 
-        if (npc.isEscaping) {
-            scheduleNextAction(npc); // Reschedule if escaping
-            return;
-        }
+//     if (npc.isEscaping) {
+//         scheduleNextAction(npc); // Reschedule if escaping
+//         return;
+//     }
 
-        if (rand() < 0.2) {  
-            // 20% chance to pause
-            npc.isPaused = true;
-        } else {  
-            // 80% chance to choose a new direction
-            npc.isPaused = false;
-            npc.currentDir = getNewDirection(npc);
-        }
-
-        // Schedule the next action again
-        scheduleNextAction(npc);
-    });
-}
+//     if (rand() < 0.2) {  
+//         // 20% chance to pause
+//         npc.isPaused = true;
+//     } else {  
+//         // 80% chance to choose a new direction
+//         npc.isPaused = false;
+//         npc.currentDir = getNewDirection(npc);
+//     }
+// }
